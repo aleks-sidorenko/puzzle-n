@@ -1,13 +1,45 @@
 package puzzlen
 
-import cats.MonadError
 
-trait Parser[F[_]] {
-  def parse(rows: List[String]): F[Board]
+import atto.Atto._
+import atto.ParseResult.{Done, Fail}
+import atto._
+import cats.implicits._
+import cats.{Functor, MonadError, Traverse}
+import puzzlen.PuzzleError.ParsingError
+import puzzlen.Tile.{Empty, Number}
+
+trait BoardParser[F[_]] {
+  def parse(raw: String): F[Board]
 }
 
-object Parser {
-  def apply[F[_]](implicit F: MonadError[F, Throwable]): Parser[F] = (rows: List[String]) => ???
+object BoardParser {
+  val min = 2
+  val max = 6
+
+  val dim: Parser[Int] = int.filter(d => d >= min && d <= max)
+
+  val tile: Parser[Tile] = {
+    for {
+      v <- int
+    } yield if (v == 0) Empty else Number(v)
+  }
+
+  def tiles(n: Int): Parser[List[Tile]] = manyN(n, tile <~ char(' '))
+
+  val board: Parser[Board] =
+    for {
+      d <- dim <~ char(' ')
+      ts <- tiles(d)
+    } yield Board(d, ts)
+
+
+  def apply[F[_]](implicit F: MonadError[F, Throwable]): BoardParser[F] = (raw: String) => board.parseOnly(raw) match {
+    case Done(_, b) =>
+      F.pure(b)
+    case Fail(_, _, message) =>
+      F.raiseError(ParsingError(message))
+  }
 }
 
 

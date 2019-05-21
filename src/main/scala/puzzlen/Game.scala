@@ -40,6 +40,9 @@ case class Board(n: Int, board: Map[Board.Position, Tile]) {
 object Board {
   type Position = (Int, Int)
 
+  def apply(n: Int, tiles: List[Tile]): Board =
+    Board(n, tiles.zipWithIndex.map { case (t, i) => (i, i) -> t }.toMap)
+
   def goal(n: Int): Board = {
     val tiles = for {
       i <- 0 until n

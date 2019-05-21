@@ -6,6 +6,8 @@ object PuzzleError {
 
   case object Unsolvable extends PuzzleError
 
-  final case class InvalidInput(msg: String) extends PuzzleError
+  case object ValidationError extends PuzzleError
+
+  final case class ParsingError(msg: String) extends PuzzleError
 
 }

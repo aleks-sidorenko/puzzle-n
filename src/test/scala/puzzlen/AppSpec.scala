@@ -5,32 +5,8 @@ import cats.syntax._
 import org.scalacheck.Gen
 import org.scalatest._
 import org.scalatest.prop.{Checkers, PropertyChecks}
-import puzzlen.PuzzleError.InvalidInput
+import puzzlen.PuzzleError.ParsingError
 
-
-trait TestHelpers {
-  implicit val monadError: MonadError[Id, Throwable] = new MonadError[Id, Throwable] {
-    private val M: Monad[Id] = implicitly[Monad[Id]]
-
-    def pure[A](x: A): Id[A] =
-      x
-
-    def flatMap[A, B](fa: Id[A])(f: (A) => Id[B]): Id[B] =
-      f(fa)
-
-    def tailRecM[A, B](a: A)(f: (A) => Id[Either[A, B]]): Id[B] =
-      M.tailRecM[A, B](a)(f)
-
-    def raiseError[A](e: Throwable): Id[A] =
-      throw e
-
-    def handleErrorWith[A](fa: Id[A])(f: Throwable => Id[A]): Id[A] =
-      try fa
-      catch {
-        case t: Throwable => f(t)
-      }
-  }
-}
 
 class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers with TestHelpers {
 
@@ -65,14 +41,14 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
 
   describe("When specifying wrong input") {
 
-    describe("When dimension is not integer") {
+    describe("and dimension is not integer") {
 
-      it("should produce invalid input error") {
+      it("should produce parsing error") {
 
         forAll(Gen.listOfN(2, Gen.alphaStr)) { input =>
           val term = terminal(input)
-          a[InvalidInput] should be thrownBy {
-            app.main(List.empty)(term, Solver[Id], Parser[Id])
+          a[ParsingError] should be thrownBy {
+            app.main(List.empty)(term, Solver[Id], BoardParser[Id])
           }
         }
       }
@@ -81,27 +57,27 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
     describe("When dimension is integer") {
 
       describe("and dimension is out of allowed range") {
-        it("should produce invalid input error") {
+        it("should produce parsing error") {
 
           val gen = Gen.oneOf("1" :: Nil, "11" :: Nil, "15" :: Nil, "-5" :: Nil)
 
           forAll(gen) { input =>
             val term = terminal(input)
-            a[InvalidInput] should be thrownBy {
-              app.main(List.empty)(term, Solver[Id], Parser[Id])
+            a[ParsingError] should be thrownBy {
+              app.main(List.empty)(term, Solver[Id], BoardParser[Id])
             }
           }
         }
       }
       describe("and board number of rows is incorrect") {
-        it("should produce invalid input error") {
+        it("should produce parsing error") {
 
           val gen = Gen.oneOf("4" :: "1 2 3 4" :: Nil, "3" :: "1 2 3" :: "3 4 5" :: Nil)
 
           forAll(gen) { input =>
             val term = terminal(input)
-            a[InvalidInput] should be thrownBy {
-              app.main(List.empty)(term, Solver[Id], Parser[Id])
+            a[ParsingError] should be thrownBy {
+              app.main(List.empty)(term, Solver[Id], BoardParser[Id])
             }
           }
         }
@@ -114,8 +90,8 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
 
           forAll(gen) { input =>
             val term = terminal(input)
-            a[InvalidInput] should be thrownBy {
-              app.main(List.empty)(term, Solver[Id], Parser[Id])
+            a[ParsingError] should be thrownBy {
+              app.main(List.empty)(term, Solver[Id], BoardParser[Id])
             }
           }
         }
