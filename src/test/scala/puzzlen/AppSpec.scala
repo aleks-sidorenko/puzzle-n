@@ -86,7 +86,7 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
       describe("and board rows length are incorrect") {
         it("should produce invalid input error") {
 
-          val gen = Gen.oneOf("3" :: "1 2 3" :: "5 6 7 8" :: "9 10 11" :: Nil, "2" :: "1 2" :: "3 X 5" :: Nil)
+          val gen = Gen.oneOf("3" :: "1 2 3" :: "5 6 7 8" :: Nil, "2" :: "1 2" :: "3 X 5" :: Nil)
 
           forAll(gen) { input =>
             val term = terminal(input)

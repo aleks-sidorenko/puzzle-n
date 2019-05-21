@@ -15,7 +15,7 @@ trait BoardParser[F[_]] {
 
 object BoardParser {
   val min = 2
-  val max = 6
+  val max = 4
 
   val dim: Parser[Int] = int.filter(d => d >= min && d <= max)
 
@@ -30,8 +30,9 @@ object BoardParser {
   val board: Parser[Board] =
     for {
       d <- dim <~ char(' ')
-      ts <- tiles(d)
-    } yield Board(d, ts)
+      ts <- tiles(d * d - 1)
+      last <- tile
+    } yield Board(d, ts ::: last :: Nil)
 
 
   def apply[F[_]](implicit F: MonadError[F, Throwable]): BoardParser[F] = (raw: String) => board.parseOnly(raw) match {

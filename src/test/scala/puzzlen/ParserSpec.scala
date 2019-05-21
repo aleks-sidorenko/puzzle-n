@@ -5,7 +5,7 @@ import org.scalacheck.Gen
 import org.scalacheck.Gen.numChar
 import org.scalatest._
 import org.scalatest.prop.{Checkers, PropertyChecks}
-import puzzlen.PuzzleError.ParsingError
+import puzzlen.PuzzleError.{ParsingError, ValidationError}
 
 
 class ParserSpec extends FunSpec with Matchers with PropertyChecks with Checkers with TestHelpers {
@@ -24,7 +24,7 @@ class ParserSpec extends FunSpec with Matchers with PropertyChecks with Checkers
 
     describe("and tiles are not numbers") {
 
-      it("should produce invalid input error") {
+      it("should produce parsing error") {
 
         val gen = raw(s => Gen.listOfN(s, Gen.alphaChar.map(_.toString)))
 
@@ -36,6 +36,22 @@ class ParserSpec extends FunSpec with Matchers with PropertyChecks with Checkers
       }
 
     }
+
+    describe("and tiles number are less than dimension") {
+
+      it("should produce parsing error") {
+
+        val gen = raw(s => Gen.listOfN(s / 2, Gen.numChar.map(_.toString)))
+
+        forAll(gen) { case (_, raw) =>
+          a[ParsingError] should be thrownBy {
+            parser.parse(raw)
+          }
+        }
+      }
+
+    }
+
   }
 
   describe("When specifying correct input") {
@@ -45,7 +61,7 @@ class ParserSpec extends FunSpec with Matchers with PropertyChecks with Checkers
       val gen = raw(s => Gen.const((0 until s * s).map(_.toString).toList))
 
       forAll(gen) { case (n, raw) =>
-        parser.parse(raw) should matchPattern { case Board(i, _) if i == n => }
+        parser.parse(raw) should matchPattern { case Board(i, _, _) if i == n => }
       }
     }
 
