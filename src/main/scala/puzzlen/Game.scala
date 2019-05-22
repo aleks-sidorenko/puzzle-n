@@ -76,7 +76,7 @@ case class Board(n: Int, emptyPosition: Board.Position, board: Map[Board.Positio
     }
   }
 
-  private def inversions: Int = {
+  private lazy val inversions: Int = {
     def inversion(i: Int, j: Int): Boolean = (tiles(i), tiles(j)) match {
       case (Number(a), Number(b)) => a > b
       case _ => false
@@ -133,7 +133,7 @@ object Board {
   def apply(n: Int, tiles: List[Tile]): Board = {
     if (tiles.length != n * n) throw ValidationError
     val board = tiles.zipWithIndex.map { case (t, i) => (i / n, i % n) -> t }
-    val emptyPos = board.collect { case (p, Empty) => p }.headOption.getOrElse(throw ValidationError)
+    val emptyPos = board.collectFirst { case (p, Empty) => p }.getOrElse(throw ValidationError)
     Board(n, emptyPos, board.toMap)
   }
 

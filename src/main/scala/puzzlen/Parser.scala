@@ -15,7 +15,7 @@ trait BoardParser[F[_]] {
 
 object BoardParser {
   val min = 2
-  val max = 4
+  val max = 5
 
   implicit val dim: Parser[Int] = int.filter(d => d >= min && d <= max)
 
