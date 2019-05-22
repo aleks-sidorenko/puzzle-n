@@ -122,6 +122,8 @@ case class Board(n: Int, emptyPosition: Board.Position, board: Map[Board.Positio
     mv <- validMoves
     brd <- move(mv)
   } yield brd -> (mv :: moves)
+
+  def repr: String = tiles.map(_.num.toString).grouped(n).map(_.mkString(" ")).mkString("\n")
 }
 
 object Board {
@@ -153,6 +155,26 @@ trait Solver[F[_]] extends (Board => F[List[Move]])
 
 object Solver {
 
+  class SolverState() {
+    lazy val queue = new mutable.PriorityQueue[Board.State]()
+    lazy val seen = new mutable.HashSet[Board]()
+
+    private def has(b: Board): Boolean = seen.contains(b)
+
+    def isEmpty = queue.isEmpty
+
+    def put(s: Board.State): Unit = {
+      val (b, ms) = s
+      if (!has(b)) {
+        queue.enqueue(s)
+        seen += b
+      }
+    }
+
+    def get: Board.State = queue.dequeue()
+
+  }
+
   implicit val boardOrdering: Ordering[Board] = (x: Board, y: Board) => {
     x.distance - y.distance
   }
@@ -163,17 +185,18 @@ object Solver {
 
     if (!board.solvable) F.raiseError(Unsolvable)
     else {
-      lazy val queue = new mutable.PriorityQueue[Board.State]()
-      queue.enqueue(board -> List.empty)
+      val state = new SolverState()
+
+      state.put(board -> List.empty)
 
       @tailrec
       def loop(): F[List[Move]] = {
-        if (queue.isEmpty) F.raiseError(Unsolvable)
+        if (state.isEmpty) F.raiseError(Unsolvable)
         else {
-          val (b, ms) = queue.dequeue()
+          val (b, ms) = state.get
           if (b.solved) F.pure(ms)
           else {
-            b.tick(ms).foreach(queue.enqueue(_))
+            b.tick(ms).foreach(state.put)
             loop()
           }
         }
@@ -181,6 +204,7 @@ object Solver {
 
       F.map(loop())(_.reverse)
     }
-  }
-}
 
+  }
+
+}

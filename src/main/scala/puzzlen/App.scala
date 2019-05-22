@@ -1,8 +1,9 @@
 package puzzlen
 
 import cats.MonadError
-import cats.effect.{ExitCode, IO, IOApp}
+import cats.effect.{ExitCode, IO, IOApp, Sync}
 import cats.implicits._
+import cats.syntax._
 
 
 trait AppF[F[_]] {
@@ -26,7 +27,10 @@ trait AppF[F[_]] {
     for {
       board <- input()
       _ <- validator.validate(board)
+      _ <- term.putLn("The board is (empty tile is '0'):")
+      _ <- term.putLn(board.repr)
       solution <- solver(board)
+      _ <- term.putLn("The solution is:")
       _ <- solution.map(m => term.putLn(m.toString)).sequence
     } yield ()
   }
@@ -44,8 +48,7 @@ trait AppF[F[_]] {
 
 object App extends AppF[IO] with IOApp {
 
-  implicit val F = MonadError[IO, Throwable]
-
+  implicit val F = Sync[IO]
 
   def run(args: List[String]): IO[ExitCode] = {
 

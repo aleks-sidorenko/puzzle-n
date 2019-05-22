@@ -5,6 +5,7 @@ import org.scalacheck.Gen
 import org.scalatest._
 import org.scalatest.prop.{Checkers, PropertyChecks}
 import puzzlen.PuzzleError.{Unsolvable, ValidationError}
+import puzzlen.Tile.Empty
 
 
 class SolverSpec extends FunSpec with Matchers with PropertyChecks with Checkers with TestHelpers {
@@ -42,6 +43,10 @@ class SolverSpec extends FunSpec with Matchers with PropertyChecks with Checkers
 
   val unsolvableBoard: Gen[Board] = randomBoard.filterNot(_.solvable)
 
+  val customBoard: Gen[Board] = Gen.oneOf(Seq(
+    Board(3, (1 :: 2 :: 3 :: 5 :: 4 :: 6 :: 8 :: 7 :: Nil).map(Tile.Number) ::: Empty :: Nil)
+  ))
+
 
   describe("When specifying solvable initial board") {
     it("should solve correctly") {
@@ -51,6 +56,19 @@ class SolverSpec extends FunSpec with Matchers with PropertyChecks with Checkers
         val res = solver(brd)
         // first we check if apply all moves to goal board we will get generated board
         goal.move(ms) shouldBe Some(brd)
+        // check that if apply all result moves to board we will get goal board
+        brd.move(res) shouldBe Some(goal)
+      }
+    }
+  }
+
+  describe("When specifying custom initial board") {
+    it("should solve correctly") {
+      forAll(customBoard) { case (brd) =>
+        brd.solvable shouldBe true
+        val goal = Board.goal(brd.n)
+        val res = solver(brd)
+
         // check that if apply all result moves to board we will get goal board
         brd.move(res) shouldBe Some(goal)
       }
