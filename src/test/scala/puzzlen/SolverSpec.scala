@@ -4,6 +4,7 @@ import cats.Id
 import org.scalacheck.Gen
 import org.scalatest._
 import org.scalatest.prop.{Checkers, PropertyChecks}
+import puzzlen.PuzzleError.{Unsolvable, ValidationError}
 
 
 class SolverSpec extends FunSpec with Matchers with PropertyChecks with Checkers with TestHelpers {
@@ -33,6 +34,14 @@ class SolverSpec extends FunSpec with Matchers with PropertyChecks with Checkers
       brd -> ms.reverse
     }
 
+  val randomBoard: Gen[Board] = for {
+    dim <- Gen.choose[Int](BoardParser.min, BoardParser.max)
+    tiles = scala.util.Random.shuffle(Tile.Empty :: (0 until dim * dim - 1).toList.map(Tile.Number))
+    brd = Board(dim, tiles)
+  } yield brd
+
+  val unsolvableBoard: Gen[Board] = randomBoard.filterNot(_.solvable)
+
 
   describe("When specifying solvable initial board") {
     it("should solve correctly") {
@@ -44,6 +53,19 @@ class SolverSpec extends FunSpec with Matchers with PropertyChecks with Checkers
         goal.move(ms) shouldBe Some(brd)
         // check that if apply all result moves to board we will get goal board
         brd.move(res) shouldBe Some(goal)
+      }
+    }
+  }
+
+
+  describe("When specifying not solvable initial board") {
+    it("should produce unsolvable error") {
+
+      forAll(unsolvableBoard) { (brd) =>
+        brd.solvable shouldBe false
+        a[Unsolvable.type] should be thrownBy {
+          solver(brd)
+        }
       }
     }
   }

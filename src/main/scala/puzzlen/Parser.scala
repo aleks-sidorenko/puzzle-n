@@ -17,9 +17,9 @@ object BoardParser {
   val min = 2
   val max = 4
 
-  val dim: Parser[Int] = int.filter(d => d >= min && d <= max)
+  implicit val dim: Parser[Int] = int.filter(d => d >= min && d <= max)
 
-  val tile: Parser[Tile] = {
+  implicit val tile: Parser[Tile] = {
     for {
       v <- int
     } yield if (v == 0) Empty else Number(v)
@@ -27,7 +27,7 @@ object BoardParser {
 
   def tiles(n: Int): Parser[List[Tile]] = manyN(n, tile <~ char(' '))
 
-  val board: Parser[Board] =
+  implicit val board: Parser[Board] =
     for {
       d <- dim <~ char(' ')
       ts <- tiles(d * d - 1)
@@ -35,7 +35,7 @@ object BoardParser {
     } yield Board(d, ts ::: last :: Nil)
 
 
-  def apply[F[_]](implicit F: MonadError[F, Throwable]): BoardParser[F] = (raw: String) => board.parseOnly(raw) match {
+  def apply[F[_]](implicit F: MonadError[F, Throwable], parser: Parser[Board] = board): BoardParser[F] = (raw: String) => parser.parseOnly(raw) match {
     case Done(_, b) =>
       F.pure(b)
     case Fail(_, _, message) =>

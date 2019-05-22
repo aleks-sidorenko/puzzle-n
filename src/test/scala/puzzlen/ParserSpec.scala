@@ -2,10 +2,9 @@ package puzzlen
 
 import cats.Id
 import org.scalacheck.Gen
-import org.scalacheck.Gen.numChar
 import org.scalatest._
 import org.scalatest.prop.{Checkers, PropertyChecks}
-import puzzlen.PuzzleError.{ParsingError, ValidationError}
+import puzzlen.PuzzleError.ParsingError
 
 
 class ParserSpec extends FunSpec with Matchers with PropertyChecks with Checkers with TestHelpers {

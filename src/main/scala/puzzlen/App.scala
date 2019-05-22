@@ -4,8 +4,6 @@ import cats.MonadError
 import cats.effect.{ExitCode, IO, IOApp}
 import cats.implicits._
 
-import scala.util.Try
-
 
 trait AppF[F[_]] {
 
@@ -23,17 +21,21 @@ trait AppF[F[_]] {
   }
 
 
-  private def program()(implicit term: Terminal[F], parser: BoardParser[F], solver: Solver[F]): F[Unit] = {
+  private def program()(implicit term: Terminal[F], parser: BoardParser[F],
+                        validator: BoardValidator[F], solver: Solver[F]): F[Unit] = {
     for {
       board <- input()
+      _ <- validator.validate(board)
       solution <- solver(board)
       _ <- solution.map(m => term.putLn(m.toString)).sequence
     } yield ()
   }
 
-  def main(args: List[String])(implicit term: Terminal[F], solver: Solver[F], parser: BoardParser[F]): F[Unit] = {
+  def main(args: List[String])(implicit term: Terminal[F], parser: BoardParser[F],
+                               validator: BoardValidator[F], solver: Solver[F]): F[Unit] = {
     program().handleErrorWith({
       case PuzzleError.Unsolvable => term.putLn("The puzzle is not solvable")
+      case PuzzleError.ValidationError => term.putLn(s"The puzzle with this input is invalid")
       case PuzzleError.ParsingError(err) => term.putLn(s"The input is not correct: $err")
       case err => term.putLn(s"Unknown error: ${err.getMessage}")
     })
@@ -47,6 +49,7 @@ object App extends AppF[IO] with IOApp {
 
   def run(args: List[String]): IO[ExitCode] = {
 
-    main(args)(Terminal[IO], Solver[IO], BoardParser[IO]).as(ExitCode.Success)
+    import BoardParser._
+    main(args)(Terminal[IO], BoardParser[IO], BoardValidator[IO], Solver[IO]).as(ExitCode.Success)
   }
 }

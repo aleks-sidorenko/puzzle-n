@@ -1,7 +1,7 @@
 package puzzlen
 
 import cats.MonadError
-import puzzlen.PuzzleError.Unsolvable
+import puzzlen.PuzzleError.{Unsolvable, ValidationError}
 import puzzlen.Tile.{Empty, Number}
 
 import scala.annotation.tailrec
@@ -33,7 +33,13 @@ object Move {
 }
 
 
-sealed trait Tile
+sealed trait Tile {
+  def num: Int =
+    this match {
+      case Empty => 0
+      case Number(v) => v
+    }
+}
 
 object Tile {
 
@@ -52,6 +58,13 @@ object Math {
 case class Board(n: Int, emptyPosition: Board.Position, board: Map[Board.Position, Tile]) {
   val validMoves: List[Move] = scala.util.Random.shuffle(Move.all.filter(m => pos(m).isDefined).toList)
 
+  lazy val tiles: Vector[Tile] = (for {
+    i <- 0 until n
+    j <- 0 until n
+  } yield board(i -> j)).toVector
+
+  lazy val tilesSet = tiles.toSet
+
   private def pos(m: Move): Option[Board.Position] = {
     val (x, y) = emptyPosition
     m match {
@@ -63,7 +76,18 @@ case class Board(n: Int, emptyPosition: Board.Position, board: Map[Board.Positio
     }
   }
 
-  private def inversions: Int = ???
+  private def inversions: Int = {
+    def inversion(i: Int, j: Int): Boolean = (tiles(i), tiles(j)) match {
+      case (Number(a), Number(b)) => a > b
+      case _ => false
+    }
+
+    (for {
+      i <- 0 until n * n
+      j <- i + 1 until n * n
+      if inversion(i, j)
+    } yield 1).sum
+  }
 
   def solvable: Boolean = {
     import Math._
@@ -105,8 +129,9 @@ object Board {
   type State = (Board, List[Move])
 
   def apply(n: Int, tiles: List[Tile]): Board = {
+    if (tiles.length != n * n) throw ValidationError
     val board = tiles.zipWithIndex.map { case (t, i) => (i / n, i % n) -> t }
-    val emptyPos = board.collect { case (p, Empty) => p }.head
+    val emptyPos = board.collect { case (p, Empty) => p }.headOption.getOrElse(throw ValidationError)
     Board(n, emptyPos, board.toMap)
   }
 
@@ -136,23 +161,26 @@ object Solver {
 
   def apply[F[_]](implicit F: MonadError[F, Throwable]): Solver[F] = (board: Board) => {
 
-    lazy val queue = new mutable.PriorityQueue[Board.State]()
-    queue.enqueue(board -> List.empty)
+    if (!board.solvable) F.raiseError(Unsolvable)
+    else {
+      lazy val queue = new mutable.PriorityQueue[Board.State]()
+      queue.enqueue(board -> List.empty)
 
-    @tailrec
-    def loop(): F[List[Move]] = {
-      if (queue.isEmpty) F.raiseError(Unsolvable)
-      else {
-        val (b, ms) = queue.dequeue()
-        if (b.solved) F.pure(ms)
+      @tailrec
+      def loop(): F[List[Move]] = {
+        if (queue.isEmpty) F.raiseError(Unsolvable)
         else {
-          b.tick(ms).foreach(queue.enqueue(_))
-          loop()
+          val (b, ms) = queue.dequeue()
+          if (b.solved) F.pure(ms)
+          else {
+            b.tick(ms).foreach(queue.enqueue(_))
+            loop()
+          }
         }
       }
-    }
 
-    F.map(loop())(_.reverse)
+      F.map(loop())(_.reverse)
+    }
   }
 }
 

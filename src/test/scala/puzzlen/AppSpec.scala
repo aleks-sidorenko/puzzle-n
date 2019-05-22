@@ -1,7 +1,6 @@
 package puzzlen
 
-import cats.{Eval, Id, Monad, MonadError}
-import cats.syntax._
+import cats.{Id, MonadError}
 import org.scalacheck.Gen
 import org.scalatest._
 import org.scalatest.prop.{Checkers, PropertyChecks}
@@ -36,7 +35,6 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
 
   val app = new AppF[Id] {
     implicit val F: MonadError[Id, Throwable] = monadError
-
   }
 
   describe("When specifying wrong input") {
@@ -48,7 +46,7 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
         forAll(Gen.listOfN(2, Gen.alphaStr)) { input =>
           val term = terminal(input)
           a[ParsingError] should be thrownBy {
-            app.main(List.empty)(term, Solver[Id], BoardParser[Id])
+            app.main(List.empty)(term, BoardParser[Id], BoardValidator[Id], Solver[Id])
           }
         }
       }
@@ -64,7 +62,7 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
           forAll(gen) { input =>
             val term = terminal(input)
             a[ParsingError] should be thrownBy {
-              app.main(List.empty)(term, Solver[Id], BoardParser[Id])
+              app.main(List.empty)(term, BoardParser[Id], BoardValidator[Id], Solver[Id])
             }
           }
         }
@@ -77,7 +75,8 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
           forAll(gen) { input =>
             val term = terminal(input)
             a[ParsingError] should be thrownBy {
-              app.main(List.empty)(term, Solver[Id], BoardParser[Id])
+              import BoardParser._
+              app.main(List.empty)(term, BoardParser[Id], BoardValidator[Id], Solver[Id])
             }
           }
         }
@@ -91,7 +90,7 @@ class AppSpec extends FunSpec with Matchers with PropertyChecks with Checkers wi
           forAll(gen) { input =>
             val term = terminal(input)
             a[ParsingError] should be thrownBy {
-              app.main(List.empty)(term, Solver[Id], BoardParser[Id])
+              app.main(List.empty)(term, BoardParser[Id], BoardValidator[Id], Solver[Id])
             }
           }
         }
