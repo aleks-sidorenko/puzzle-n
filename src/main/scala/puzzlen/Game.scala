@@ -155,9 +155,11 @@ trait Solver[F[_]] extends (Board => F[List[Move]])
 
 object Solver {
 
-  class SolverState() {
-    lazy val queue = new mutable.PriorityQueue[Board.State]()
-    lazy val seen = new mutable.HashSet[Board]()
+  class SolverState()(implicit ord: Ordering[Board.State]) {
+    // the min heap data structure to get next board state with less distance to goal and with minimum moves done
+    private lazy val queue = new mutable.PriorityQueue[Board.State]()(ord)
+    // we need to keep track of already visited boards to ignore them further
+    private lazy val seen = new mutable.HashSet[Board]()
 
     private def has(b: Board): Boolean = seen.contains(b)
 
@@ -176,10 +178,13 @@ object Solver {
   }
 
   implicit val boardOrdering: Ordering[Board] = (x: Board, y: Board) => {
-    x.distance - y.distance
+    y.distance - x.distance
   }
 
-  implicit val stateOrdering: Ordering[Board.State] = Ordering.by[Board.State, Board] { case (b, _) => b }.reverse
+  implicit val movesOrdering: Ordering[List[Move]] = Ordering.by(-1 * _.length)
+
+  // our state is ordered by minimum distance to goal and length of moves done
+  implicit val stateOrdering: Ordering[Board.State] = Ordering.Tuple2(boardOrdering, movesOrdering)
 
   def apply[F[_]](implicit F: MonadError[F, Throwable]): Solver[F] = (board: Board) => {
 
